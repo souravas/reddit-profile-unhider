@@ -1,16 +1,17 @@
 "use strict";
 
 (function () {
+  const DATE_FMT = new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   function formatDate(epochSeconds) {
     if (!epochSeconds) return "";
-    const d = new Date(epochSeconds * 1000);
-    return d.toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return DATE_FMT.format(new Date(epochSeconds * 1000));
   }
 
   function safeHref(href) {
