@@ -1,0 +1,194 @@
+.ru-panel {
+  --ru-accent: #ff4500;
+  --ru-fg: #1c1c1c;
+  --ru-fg-muted: #6b6c6e;
+  --ru-bg: #ffffff;
+  --ru-bg-soft: #f6f7f8;
+  --ru-border: #d7dadc;
+  --ru-error: #d32f2f;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  color: var(--ru-fg);
+  background: var(--ru-bg);
+  border: 1px solid var(--ru-border);
+  border-radius: 10px;
+  margin: 16px auto;
+  max-width: 900px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  text-align: left;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ru-panel {
+    --ru-fg: #d7dadc;
+    --ru-fg-muted: #818384;
+    --ru-bg: #1a1a1b;
+    --ru-bg-soft: #272729;
+    --ru-border: #343536;
+  }
+}
+
+.ru-panel * { box-sizing: border-box; }
+
+.ru-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, var(--ru-bg-soft), var(--ru-bg));
+  border-bottom: 1px solid var(--ru-border);
+}
+
+.ru-panel__badge {
+  background: var(--ru-accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.ru-panel__title-wrap { flex: 1; min-width: 0; }
+.ru-panel__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ru-fg);
+}
+.ru-panel__sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ru-fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ru-panel__toggle {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--ru-fg-muted);
+  border: 1px solid var(--ru-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ru-panel__toggle:hover { color: var(--ru-fg); background: var(--ru-bg-soft); }
+
+.ru-panel__body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ru-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ru-item {
+  padding: 12px 14px;
+  background: var(--ru-bg-soft);
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.ru-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.ru-item__title {
+  font-weight: 600;
+  color: var(--ru-fg);
+  text-decoration: none;
+  font-size: 14px;
+}
+.ru-item__title:hover { text-decoration: underline; }
+.ru-item__title--muted {
+  font-weight: 500;
+  color: var(--ru-fg-muted);
+  font-size: 12px;
+}
+
+.ru-item__meta {
+  font-size: 12px;
+  color: var(--ru-fg-muted);
+}
+
+.ru-item__body {
+  font-size: 13px;
+  color: var(--ru-fg);
+}
+.ru-item__body p { margin: 0 0 8px; }
+.ru-item__body p:last-child { margin: 0; }
+.ru-item__body a { color: var(--ru-accent); }
+.ru-item__body pre,
+.ru-item__body code {
+  background: var(--ru-bg);
+  border: 1px solid var(--ru-border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+.ru-item__body pre { padding: 8px; overflow: auto; }
+.ru-item__body blockquote {
+  margin: 4px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--ru-border);
+  color: var(--ru-fg-muted);
+}
+.ru-item__body img { max-width: 100%; height: auto; }
+
+.ru-item__url {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ru-fg-muted);
+  text-decoration: none;
+  word-break: break-all;
+}
+.ru-item__url:hover { color: var(--ru-accent); text-decoration: underline; }
+
+.ru-section-h {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ru-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ru-empty {
+  margin: 0;
+  padding: 12px;
+  text-align: center;
+  color: var(--ru-fg-muted);
+  font-size: 13px;
+  background: var(--ru-bg-soft);
+  border-radius: 6px;
+}
+.ru-empty--error { color: var(--ru-error); }
+
+.ru-slot--loading {
+  padding: 12px;
+  color: var(--ru-fg-muted);
+  font-style: italic;
+}
+
+.ru-hidden { display: none !important; }
