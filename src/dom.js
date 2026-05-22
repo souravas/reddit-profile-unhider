@@ -1,16 +1,6 @@
 "use strict";
 
 (function () {
-  function escapeHTML(s) {
-    if (s == null) return "";
-    return String(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-
   function formatDate(epochSeconds) {
     if (!epochSeconds) return "";
     const d = new Date(epochSeconds * 1000);
@@ -74,10 +64,8 @@
   }
 
   function renderInline(text, container) {
-    INLINE_RE.lastIndex = 0;
     let last = 0;
-    let m;
-    while ((m = INLINE_RE.exec(text))) {
+    for (const m of text.matchAll(INLINE_RE)) {
       if (m.index > last) appendTextWithBreaks(container, text.slice(last, m.index));
       if (m[1]) {
         const code = document.createElement("code");
@@ -184,5 +172,5 @@
     return rendered;
   }
 
-  window.RU_Dom = { escapeHTML, formatDate, el, safeHref, renderMarkdown };
+  window.RU_Dom = { formatDate, el, safeHref, renderMarkdown };
 })();
