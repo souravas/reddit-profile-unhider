@@ -1,13 +1,14 @@
 "use strict";
 
 (function () {
-  const { el, escapeHTML, formatDate, safeHtmlFromArchive } = window.RU_Dom;
+  const { el, formatDate, renderMarkdown, safeHref } = window.RU_Dom;
   const Arctic = window.RU_ArcticShift;
 
   const PANEL_ID = "ru-profile-panel";
   const POSTS_REGEX = /likes? to keep (?:their|her|his) posts? hidden/i;
   const COMMENTS_REGEX = /likes? to keep (?:their|her|his) comments? hidden/i;
   const WAIT_FOR_MESSAGE_MS = 10000;
+  const STABILITY_MS = 350;
 
   function parseProfileUsername() {
     const m = location.pathname.match(/^\/(?:user|u)\/([^\/?#]+)/i);
@@ -40,26 +41,52 @@
 
   function waitForHiddenMessage() {
     return new Promise((resolve) => {
-      const initial = scanHiddenState();
-      if (initial.postsEl || initial.commentsEl) return resolve(initial);
-
       let resolved = false;
-      const observer = new MutationObserver(() => {
-        const state = scanHiddenState();
-        if (state.postsEl || state.commentsEl) {
-          if (resolved) return;
-          resolved = true;
-          observer.disconnect();
-          resolve(state);
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-      setTimeout(() => {
+      let stabilityTimer = null;
+      let pendingState = null;
+
+      const finalize = (state) => {
         if (resolved) return;
         resolved = true;
+        clearTimeout(stabilityTimer);
+        clearTimeout(timeoutTimer);
         observer.disconnect();
-        resolve(scanHiddenState());
-      }, WAIT_FOR_MESSAGE_MS);
+        resolve(state);
+      };
+
+      const check = () => {
+        if (resolved) return;
+        const state = scanHiddenState();
+        if (!state.postsEl && !state.commentsEl) return;
+
+        // Only restart the stability timer when the candidate elements change,
+        // so a settled message doesn't get reset by unrelated mutations.
+        if (
+          pendingState &&
+          pendingState.postsEl === state.postsEl &&
+          pendingState.commentsEl === state.commentsEl
+        ) {
+          return;
+        }
+
+        pendingState = state;
+        clearTimeout(stabilityTimer);
+        stabilityTimer = setTimeout(() => {
+          if (resolved) return;
+          const current = scanHiddenState();
+          const postsStable = current.postsEl === pendingState.postsEl
+            && (!current.postsEl || document.contains(current.postsEl));
+          const commentsStable = current.commentsEl === pendingState.commentsEl
+            && (!current.commentsEl || document.contains(current.commentsEl));
+          if (postsStable && commentsStable) finalize(current);
+        }, STABILITY_MS);
+      };
+
+      const observer = new MutationObserver(check);
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      check();
+
+      const timeoutTimer = setTimeout(() => finalize({ postsEl: null, commentsEl: null }), WAIT_FOR_MESSAGE_MS);
     });
   }
 
@@ -73,21 +100,27 @@
 
   function postLink(p) {
     if (!p) return "#";
-    if (p.permalink) return new URL(p.permalink, "https://www.reddit.com/").href;
+    if (p.permalink) {
+      const safe = safeHref(p.permalink);
+      if (safe) return safe;
+    }
     if (p.id) {
       return p.subreddit
-        ? `https://www.reddit.com/r/${p.subreddit}/comments/${p.id}/`
-        : `https://www.reddit.com/comments/${p.id}/`;
+        ? `https://www.reddit.com/r/${encodeURIComponent(p.subreddit)}/comments/${encodeURIComponent(p.id)}/`
+        : `https://www.reddit.com/comments/${encodeURIComponent(p.id)}/`;
     }
     return "#";
   }
 
   function commentLink(c) {
     if (!c) return "#";
-    if (c.permalink) return new URL(c.permalink, "https://www.reddit.com/").href;
+    if (c.permalink) {
+      const safe = safeHref(c.permalink);
+      if (safe) return safe;
+    }
     const linkId = (c.link_id || "").replace(/^t3_/, "");
     if (linkId && c.id && c.subreddit) {
-      return `https://www.reddit.com/r/${c.subreddit}/comments/${linkId}/_/${c.id}/`;
+      return `https://www.reddit.com/r/${encodeURIComponent(c.subreddit)}/comments/${encodeURIComponent(linkId)}/_/${encodeURIComponent(c.id)}/`;
     }
     return "#";
   }
@@ -95,37 +128,46 @@
   function renderPostItem(p) {
     const subreddit = p.subreddit ? `r/${p.subreddit}` : "";
     const title = p.title || "(no title)";
-    const bodyHtml = safeHtmlFromArchive(p.selftext_html) || (p.selftext ? `<p>${escapeHTML(p.selftext)}</p>` : "");
     const meta = [subreddit, formatDate(p.created_utc), typeof p.score === "number" ? `${p.score} pts` : null].filter(Boolean).join(" · ");
-    return el(
+    const li = el(
       "li",
       { class: "ru-item" },
       el(
         "div",
         { class: "ru-item__head" },
-        el("a", { class: "ru-item__title", href: postLink(p), target: "_blank", rel: "noopener" }, title),
+        el("a", { class: "ru-item__title", href: postLink(p), target: "_blank", rel: "noopener noreferrer" }, title),
         el("span", { class: "ru-item__meta" }, meta)
-      ),
-      bodyHtml ? el("div", { class: "ru-item__body", html: bodyHtml }) : null,
-      p.url && p.url !== postLink(p) ? el("a", { class: "ru-item__url", href: p.url, target: "_blank", rel: "noopener" }, p.url) : null
+      )
     );
+    if (p.selftext) {
+      const body = el("div", { class: "ru-item__body" });
+      if (renderMarkdown(p.selftext, body)) li.append(body);
+    }
+    const extUrl = safeHref(p.url);
+    if (extUrl && extUrl !== postLink(p)) {
+      li.append(el("a", { class: "ru-item__url", href: extUrl, target: "_blank", rel: "noopener noreferrer" }, extUrl));
+    }
+    return li;
   }
 
   function renderCommentItem(c) {
     const subreddit = c.subreddit ? `r/${c.subreddit}` : "";
-    const bodyHtml = safeHtmlFromArchive(c.body_html) || (c.body ? `<p>${escapeHTML(c.body)}</p>` : "");
     const meta = [subreddit, formatDate(c.created_utc), typeof c.score === "number" ? `${c.score} pts` : null].filter(Boolean).join(" · ");
-    return el(
+    const li = el(
       "li",
       { class: "ru-item" },
       el(
         "div",
         { class: "ru-item__head" },
-        el("a", { class: "ru-item__title ru-item__title--muted", href: commentLink(c), target: "_blank", rel: "noopener" }, "Comment in " + (subreddit || "thread")),
+        el("a", { class: "ru-item__title ru-item__title--muted", href: commentLink(c), target: "_blank", rel: "noopener noreferrer" }, "Comment in " + (subreddit || "thread")),
         el("span", { class: "ru-item__meta" }, meta)
-      ),
-      bodyHtml ? el("div", { class: "ru-item__body", html: bodyHtml }) : null
+      )
     );
+    if (c.body) {
+      const body = el("div", { class: "ru-item__body" });
+      if (renderMarkdown(c.body, body)) li.append(body);
+    }
+    return li;
   }
 
   function buildPanel(username, hasPosts, hasComments) {
@@ -140,8 +182,7 @@
         el(
           "div",
           { class: "ru-panel__title-wrap" },
-          el("h2", { class: "ru-panel__title" }, `Restoring hidden ${sectionsLabel} for u/${username}`),
-          el("p", { class: "ru-panel__sub" }, "Pulled from the Arctic Shift archive.")
+          el("h2", { class: "ru-panel__title" }, `Restoring hidden ${sectionsLabel} for u/${username}`)
         ),
         el(
           "button",
@@ -213,7 +254,9 @@
     document.getElementById(PANEL_ID)?.remove();
     if (!username || isReservedUser(username)) return;
 
+    const startPath = location.pathname;
     const { postsEl, commentsEl } = await waitForHiddenMessage();
+    if (location.pathname !== startPath) return;
     if (!postsEl && !commentsEl) return;
 
     if (document.getElementById(PANEL_ID)) return;

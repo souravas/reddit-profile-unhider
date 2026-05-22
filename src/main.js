@@ -23,16 +23,30 @@
     }, RUN_DEBOUNCE_MS);
   }
 
+  let lastHref = location.href;
+
+  function notifyLocationChange() {
+    lastHref = location.href;
+    window.dispatchEvent(new Event("ru:locationchange"));
+  }
+
   for (const method of ["pushState", "replaceState"]) {
     const original = history[method];
     history[method] = function () {
       const result = original.apply(this, arguments);
-      window.dispatchEvent(new Event("ru:locationchange"));
+      notifyLocationChange();
       return result;
     };
   }
-  window.addEventListener("popstate", () => window.dispatchEvent(new Event("ru:locationchange")));
+  window.addEventListener("popstate", notifyLocationChange);
   window.addEventListener("ru:locationchange", scheduleDispatch);
+
+  // Fallback poll for navigations that bypass pushState/popstate (e.g. the
+  // Navigation API or framework-internal routing). Routed through
+  // notifyLocationChange so a primary signal doesn't fire a second time here.
+  setInterval(() => {
+    if (location.href !== lastHref) notifyLocationChange();
+  }, 500);
 
   scheduleDispatch();
 })();

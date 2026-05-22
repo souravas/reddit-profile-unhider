@@ -3,11 +3,32 @@
 (function () {
   const API_BASE = "https://arctic-shift.photon-reddit.com/api";
   const REQUEST_TIMEOUT_MS = 20000;
+  const MAX_CACHE_ENTRIES = 50;
 
   const cache = new Map();
 
   function cacheKey(path, params) {
-    return `${path}?${new URLSearchParams(params).toString()}`;
+    const parts = Object.keys(params)
+      .sort()
+      .map((k) => `${k}=${params[k]}`)
+      .join("&");
+    return `${path}?${parts}`;
+  }
+
+  function cacheGet(key) {
+    if (!cache.has(key)) return undefined;
+    const value = cache.get(key);
+    cache.delete(key);
+    cache.set(key, value);
+    return value;
+  }
+
+  function cachePut(key, value) {
+    if (cache.has(key)) cache.delete(key);
+    cache.set(key, value);
+    while (cache.size > MAX_CACHE_ENTRIES) {
+      cache.delete(cache.keys().next().value);
+    }
   }
 
   async function timedFetch(url, options = {}) {
@@ -22,7 +43,8 @@
 
   async function call(path, params) {
     const key = cacheKey(path, params);
-    if (cache.has(key)) return cache.get(key);
+    const cached = cacheGet(key);
+    if (cached) return cached;
     const url = new URL(`${API_BASE}${path}`);
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === null || v === "") continue;
@@ -36,16 +58,16 @@
     }
     const json = await resp.json();
     const data = json && Array.isArray(json.data) ? json.data : [];
-    cache.set(key, data);
+    cachePut(key, data);
     return data;
   }
 
   async function searchPostsByAuthor(author, { limit = 100 } = {}) {
-    return call("/posts/search", { author, limit, sort: "desc", md2html: true });
+    return call("/posts/search", { author, limit, sort: "desc" });
   }
 
   async function searchCommentsByAuthor(author, { limit = 100 } = {}) {
-    return call("/comments/search", { author, limit, sort: "desc", md2html: true });
+    return call("/comments/search", { author, limit, sort: "desc" });
   }
 
   window.RU_ArcticShift = { searchPostsByAuthor, searchCommentsByAuthor };
