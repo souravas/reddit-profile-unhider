@@ -8,12 +8,11 @@ When you visit a user page and Reddit shows:
 
 …this extension detects that message, pulls the user's archived posts/comments from [Arctic Shift](https://arctic-shift.photon-reddit.com/), and renders them in a panel right below the message. No button click — it happens automatically.
 
-## Install (unpacked)
+## Install
 
-1. Open `chrome://extensions`
-2. Turn on **Developer mode**
-3. Click **Load unpacked**, select this folder
-4. Visit any user profile that's marked as hidden — e.g., `https://www.reddit.com/user/<name>/`
+Install from the Chrome Web Store: [Reddit Profile Unhider](https://chromewebstore.google.com/detail/reddit-profile-unhider/apcnakinkkhopllilmienljcgmaaigld)
+
+Then visit any user profile that's marked as hidden — e.g., `https://www.reddit.com/user/<name>/`
 
 ## How it works
 
