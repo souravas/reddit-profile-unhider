@@ -51,9 +51,15 @@
   // Fallback poll for navigations that bypass pushState/popstate (e.g. the
   // Navigation API or framework-internal routing). Routed through
   // notifyLocationChange so a primary signal doesn't fire a second time here.
+  // Skip the check while the tab is hidden, and re-check on becoming visible so
+  // a background navigation isn't missed for up to the poll interval.
   setInterval(() => {
+    if (document.hidden) return;
     if (location.href !== lastHref) notifyLocationChange();
   }, 500);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && location.href !== lastHref) notifyLocationChange();
+  });
 
   scheduleDispatch();
 })();

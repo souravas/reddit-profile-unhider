@@ -9,6 +9,10 @@
   const COMMENTS_REGEX = /likes? to keep (?:their|her|his) comments? hidden/i;
   const WAIT_FOR_MESSAGE_MS = 10000;
   const STABILITY_MS = 350;
+  // Coalesce observer-driven rescans so a burst of mutations during page
+  // hydration triggers at most one full-document text walk per window, rather
+  // than re-walking the whole DOM on every mutation batch.
+  const SCAN_COALESCE_MS = 150;
 
   // Aborts the in-flight waitForHiddenMessage when a newer navigation supersedes
   // it, so stale observers don't keep walking the DOM in the background.
@@ -45,12 +49,14 @@
     return new Promise((resolve) => {
       let resolved = false;
       let stabilityTimer = null;
+      let checkScheduled = null;
       let pendingState = null;
 
       const finalize = (state) => {
         if (resolved) return;
         resolved = true;
         clearTimeout(stabilityTimer);
+        clearTimeout(checkScheduled);
         clearTimeout(timeoutTimer);
         observer.disconnect();
         if (signal) signal.removeEventListener("abort", onAbort);
@@ -87,7 +93,19 @@
         }, STABILITY_MS);
       };
 
-      const observer = new MutationObserver(check);
+      // The first mutation in a window schedules a single rescan; further
+      // mutations fold into it instead of each kicking off a fresh walk.
+      // setTimeout (not rAF) keeps this working in background tabs, where the
+      // profile may be opened before the user switches to it.
+      const scheduleCheck = () => {
+        if (checkScheduled || resolved) return;
+        checkScheduled = setTimeout(() => {
+          checkScheduled = null;
+          check();
+        }, SCAN_COALESCE_MS);
+      };
+
+      const observer = new MutationObserver(scheduleCheck);
 
       if (signal) {
         if (signal.aborted) { resolve({ postsEl: null, commentsEl: null }); return; }
@@ -140,13 +158,14 @@
     const subreddit = p.subreddit ? `r/${p.subreddit}` : "";
     const title = p.title || "(no title)";
     const meta = [subreddit, formatDate(p.created_utc), typeof p.score === "number" ? `${p.score} pts` : null].filter(Boolean).join(" · ");
+    const permalink = postLink(p);
     const li = el(
       "li",
       { class: "ru-item" },
       el(
         "div",
         { class: "ru-item__head" },
-        el("a", { class: "ru-item__title", href: postLink(p), target: "_blank", rel: "noopener noreferrer" }, title),
+        el("a", { class: "ru-item__title", href: permalink, target: "_blank", rel: "noopener noreferrer" }, title),
         el("span", { class: "ru-item__meta" }, meta)
       )
     );
@@ -155,7 +174,7 @@
       if (renderMarkdown(p.selftext, body)) li.append(body);
     }
     const extUrl = safeHref(p.url);
-    if (extUrl && extUrl !== postLink(p)) {
+    if (extUrl && extUrl !== permalink) {
       li.append(el("a", { class: "ru-item__url", href: extUrl, target: "_blank", rel: "noopener noreferrer" }, extUrl));
     }
     return li;
