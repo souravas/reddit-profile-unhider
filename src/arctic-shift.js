@@ -70,5 +70,30 @@
     return call("/comments/search", { author, limit, sort: "desc" });
   }
 
-  window.RU_ArcticShift = { searchPostsByAuthor, searchCommentsByAuthor };
+  // Arctic Shift's /ids endpoints expect bare base-36 ids (no t1_/t3_ prefix).
+  function bareIds(ids) {
+    return ids
+      .map((id) => String(id).replace(/^t[0-9]_/, ""))
+      .filter(Boolean)
+      .join(",");
+  }
+
+  async function getPostsByIds(ids, { fields } = {}) {
+    const joined = bareIds(ids);
+    if (!joined) return [];
+    return call("/posts/ids", { ids: joined, fields });
+  }
+
+  async function getCommentsByIds(ids, { fields } = {}) {
+    const joined = bareIds(ids);
+    if (!joined) return [];
+    return call("/comments/ids", { ids: joined, fields });
+  }
+
+  window.RU_ArcticShift = {
+    searchPostsByAuthor,
+    searchCommentsByAuthor,
+    getPostsByIds,
+    getCommentsByIds,
+  };
 })();

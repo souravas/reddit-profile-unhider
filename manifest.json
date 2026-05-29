@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Reddit Profile Unhider",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Reveal Reddit content that's been hidden on a user's profile, removed by mods, or deleted.",
   "host_permissions": [
     "https://arctic-shift.photon-reddit.com/*"
@@ -12,7 +12,7 @@
         "https://www.reddit.com/*",
         "https://sh.reddit.com/*"
       ],
-      "js": ["src/arctic-shift.js", "src/dom.js", "src/profile.js", "src/main.js"],
+      "js": ["src/arctic-shift.js", "src/dom.js", "src/profile.js", "src/thread.js", "src/main.js"],
       "css": ["src/styles.css"],
       "run_at": "document_idle",
       "all_frames": false

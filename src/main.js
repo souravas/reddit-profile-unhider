@@ -13,6 +13,13 @@
     if (isProfileRoute()) {
       window.RU_Profile.run().catch((err) => console.warn("[unhider] profile run failed", err));
     }
+    // Self-gates on thread routes and tears down its observer when leaving one,
+    // so it's safe (and necessary, for cleanup) to call on every navigation.
+    try {
+      window.RU_Thread.run();
+    } catch (err) {
+      console.warn("[unhider] thread run failed", err);
+    }
   }
 
   function scheduleDispatch() {

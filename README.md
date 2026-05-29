@@ -25,6 +25,20 @@ A single content script runs on `www.reddit.com` and `sh.reddit.com`:
 
 Only what's hidden is fetched. If only comments are hidden, only comments are loaded. If both are hidden, both are loaded.
 
+## Deleted & removed content in threads
+
+Inside a thread (`/r/<sub>/comments/<id>/…`), the extension also spots posts and comments
+that show up as `[deleted]` / `[removed]` / "Comment removed by moderator" and adds a small
+**Reveal archived** button beside each one ([src/thread.js](src/thread.js)). Click it and the
+original author and body are fetched from Arctic Shift and rendered in place:
+
+- Comments → `/api/comments/ids?ids=<id>`
+- Posts → `/api/posts/ids?ids=<id>` (falls back to the original link URL for non-text posts)
+
+Nothing is fetched until you click, so prolific threads don't trigger bulk requests. Newly
+loaded comments (from scrolling or "view more comments") get buttons automatically via a
+`MutationObserver`.
+
 ## Permissions
 
 - Content script runs on `www.reddit.com` and `sh.reddit.com` (via the manifest's `content_scripts.matches` — no broader page access).
@@ -45,6 +59,7 @@ manifest.json           MV3 manifest
 src/arctic-shift.js     Arctic Shift API client
 src/dom.js              DOM helpers
 src/profile.js          Hidden-profile detection + render
+src/thread.js           In-thread deleted/removed reveal
 src/main.js             SPA navigation router
 src/styles.css          Panel styles
 src/popup.html          Toolbar popup (lookup-by-username shortcut)
