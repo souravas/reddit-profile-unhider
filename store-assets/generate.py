@@ -465,7 +465,157 @@ def escape(s: str) -> str:
 
 
 # ----------------------------------------------------------------------
-# 5) Screenshot — "how it works" (1280x800)
+# 5) Screenshot — in-thread "Reveal archived" (1280x800)
+# ----------------------------------------------------------------------
+def _avatar(cx: float, cy: float, r: float, letter: str) -> str:
+    return f"""
+      <circle cx="{cx}" cy="{cy}" r="{r}" fill="url(#brand)"/>
+      <text x="{cx}" y="{cy + r * 0.36}" text-anchor="middle"
+            font-family="DejaVu Sans, Liberation Sans, sans-serif"
+            font-size="{r}" font-weight="800" fill="#fff">{escape(letter)}</text>"""
+
+
+def _author_line(x: float, y: float, name: str, when: str) -> str:
+    return f"""
+      <text x="{x}" y="{y}" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+            font-size="13" font-weight="700" fill="{TEXT_HI}">u/{escape(name)}<tspan
+            font-weight="400" fill="{TEXT_LOW}">   ·   {escape(when)}</tspan></text>"""
+
+
+def _removed_body(x: float, y: float) -> str:
+    return f"""
+      <text x="{x}" y="{y}" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+            font-size="13" font-style="italic" fill="{TEXT_LOW}">[removed]</text>"""
+
+
+def _reveal_pill(x: float, y: float) -> str:
+    # Mirrors .ru-reveal: pill, transparent fill, border, accent text, ↺ prefix.
+    return f"""
+      <g transform="translate({x}, {y})">
+        <rect width="152" height="28" rx="14" fill="none" stroke="{BORDER}"/>
+        <text x="16" y="19" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+              font-size="14" font-weight="700" fill="{ORANGE_LIGHT}">&#8635;</text>
+        <text x="34" y="19" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+              font-size="12" font-weight="700" fill="{ORANGE_LIGHT}">Reveal archived</text>
+      </g>"""
+
+
+def _restored_block(x: float, y: float, w: float, meta: str, lines: list) -> str:
+    # Mirrors .ru-restored: soft fill, orange left border, uppercase meta, body.
+    h = 22 + 22 + len(lines) * 22 + 6
+    body = "".join(
+        f'<text x="16" y="{52 + i * 22}" font-family="DejaVu Sans, Liberation Sans, sans-serif" '
+        f'font-size="13.5" fill="{TEXT_HI}">{escape(line)}</text>'
+        for i, line in enumerate(lines)
+    )
+    return f"""
+      <g transform="translate({x}, {y})">
+        <rect width="{w}" height="{h}" rx="7" fill="{BG_PANEL}" stroke="{BORDER}"/>
+        <rect width="3" height="{h}" rx="1.5" fill="url(#brand)"/>
+        <text x="16" y="26" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+              font-size="11" font-weight="700" fill="{TEXT_LOW}" letter-spacing="0.6">{escape(meta)}</text>
+        {body}
+      </g>"""
+
+
+def screenshot_thread() -> str:
+    W, H = 1280, 800
+    frame_x, frame_y = 80, 112
+    frame_w, frame_h = W - 160, H - 200
+    chrome_h = 44
+    content_x = frame_x + 28
+    content_y = frame_y + chrome_h + 26
+    content_w = frame_w - 56
+
+    restored_w = content_w - 40 - 210
+    restored_lines = [
+        "Finally someone gets the subkey workflow right. I've been juggling three",
+        "machines with a pile of export-secret-subkey scripts for years — going to",
+        "rip all of that out this weekend. Does it sync the trustdb across hosts too?",
+    ]
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">
+      {shared_defs()}
+      <rect width="{W}" height="{H}" fill="url(#bgGlow)"/>
+
+      <!-- headline -->
+      <text x="{W/2}" y="52" text-anchor="middle"
+            font-family="DejaVu Sans, Liberation Sans, sans-serif"
+            font-size="24" font-weight="800" fill="{TEXT_HI}" letter-spacing="-0.4">
+        Removed inside a thread? Restored right where it was.
+      </text>
+      <text x="{W/2}" y="84" text-anchor="middle"
+            font-family="DejaVu Sans, Liberation Sans, sans-serif"
+            font-size="15" fill="{TEXT_LOW}">
+        Spots [deleted] / [removed] posts &amp; comments and pulls the original back inline — one click.
+      </text>
+
+      <!-- browser frame -->
+      <rect x="{frame_x}" y="{frame_y}" width="{frame_w}" height="{frame_h}" rx="12"
+            fill="{BG_SURFACE}" stroke="{BORDER}"/>
+      <rect x="{frame_x}" y="{frame_y}" width="{frame_w}" height="{chrome_h}" rx="12" fill="#202021"/>
+      <rect x="{frame_x}" y="{frame_y + chrome_h - 12}" width="{frame_w}" height="12" fill="#202021"/>
+      <circle cx="{frame_x + 22}" cy="{frame_y + chrome_h/2}" r="6" fill="#FF5F57"/>
+      <circle cx="{frame_x + 40}" cy="{frame_y + chrome_h/2}" r="6" fill="#FEBC2E"/>
+      <circle cx="{frame_x + 58}" cy="{frame_y + chrome_h/2}" r="6" fill="#28C840"/>
+      <rect x="{frame_x + 92}" y="{frame_y + 10}" width="{frame_w - 184}" height="24" rx="12"
+            fill="#0F0F10" stroke="{BORDER}"/>
+      <text x="{frame_x + 108}" y="{frame_y + 27}" font-family="DejaVu Sans Mono, monospace"
+            font-size="11" fill="{TEXT_LOW}">reddit.com/r/programming/comments/abc123/built_a_tiny_cli_for_gpg/</text>
+      <g transform="translate({frame_x + frame_w - 70}, {frame_y + 10})">
+        {app_icon(12, 12, 24, shadow=False)}
+      </g>
+
+      <g transform="translate({content_x}, {content_y})">
+        <!-- post header -->
+        <text x="0" y="8" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+              font-size="19" font-weight="800" fill="{TEXT_HI}">Built a tiny CLI for managing GPG keys across machines</text>
+        <text x="0" y="30" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+              font-size="12.5" fill="{TEXT_LOW}">r/programming · Posted by u/example · 1y ago · 1.2k upvotes</text>
+        <rect x="0" y="46" width="{content_w}" height="1" fill="{BORDER}"/>
+        <text x="0" y="76" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+              font-size="13.5" font-weight="700" fill="{TEXT_MID}">342 Comments</text>
+
+        <!-- thread connector: parent comment B → nested reply C -->
+        <path d="M 13 {208 + 36} L 13 {396 + 14} L 36 {396 + 14}"
+              fill="none" stroke="{BORDER}" stroke-width="1.5"/>
+
+        <!-- comment A: removed, shows the reveal button (the call to action) -->
+        <g transform="translate(0, 104)">
+          {_avatar(14, 14, 14, "t")}
+          {_author_line(40, 12, "threadwalker", "2y ago")}
+          {_removed_body(40, 40)}
+          {_reveal_pill(40, 54)}
+        </g>
+
+        <!-- comment B: removed, already revealed → restored block (the payoff) -->
+        <g transform="translate(0, 208)">
+          {_avatar(14, 14, 14, "s")}
+          {_author_line(40, 12, "saltymaintainer", "1y ago")}
+          {_removed_body(40, 40)}
+          {_restored_block(40, 54, restored_w, "u/saltymaintainer · 1y ago · restored from archive", restored_lines)}
+          <!-- annotation: payoff badge to the right of the restored block -->
+          <g transform="translate({40 + restored_w + 22}, {54 + 50})">
+            <rect x="0" y="-15" width="170" height="30" rx="15" fill="{ORANGE_LIGHT}" fill-opacity="0.12"
+                  stroke="url(#brandH)" stroke-width="1.3"/>
+            <circle cx="18" cy="0" r="4" fill="{ORANGE_LIGHT}"/>
+            <text x="32" y="5" font-family="DejaVu Sans, Liberation Sans, sans-serif"
+                  font-size="11.5" font-weight="800" fill="{ORANGE_LIGHT}" letter-spacing="0.8">RESTORED INLINE</text>
+          </g>
+        </g>
+
+        <!-- comment C: nested reply, removed, shows the reveal button -->
+        <g transform="translate(36, 396)">
+          {_avatar(12, 14, 12, "l")}
+          {_author_line(34, 12, "lurkerdev", "1y ago")}
+          {_removed_body(34, 38)}
+          {_reveal_pill(34, 52)}
+        </g>
+      </g>
+    </svg>"""
+
+
+# ----------------------------------------------------------------------
+# 6) Screenshot — "how it works" (1280x800)
 # ----------------------------------------------------------------------
 def screenshot_how() -> str:
     W, H = 1280, 800
@@ -550,6 +700,7 @@ def main() -> None:
     render(marquee_promo(), 1400, 560, OUT / "promo-marquee-1400x560.png")
     render(screenshot_before_after(), 1280, 800, OUT / "screenshot-1-hero-1280x800.png")
     render(screenshot_comments(), 1280, 800, OUT / "screenshot-2-comments-1280x800.png")
+    render(screenshot_thread(), 1280, 800, OUT / "screenshot-4-thread-1280x800.png")
     render(screenshot_how(), 1280, 800, OUT / "screenshot-3-howitworks-1280x800.png")
     print("done.")
 
