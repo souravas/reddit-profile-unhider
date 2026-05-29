@@ -10,6 +10,10 @@
   const WAIT_FOR_MESSAGE_MS = 10000;
   const STABILITY_MS = 350;
 
+  // Aborts the in-flight waitForHiddenMessage when a newer navigation supersedes
+  // it, so stale observers don't keep walking the DOM in the background.
+  let activeAbort = null;
+
   function parseProfileUsername() {
     const m = location.pathname.match(/^\/(?:user|u)\/([^\/?#]+)/i);
     return m ? m[1] : null;
@@ -21,25 +25,23 @@
     return lower === "me" || lower === "[deleted]";
   }
 
-  function findMessageElement(regex) {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        return regex.test(node.textContent || "")
-          ? NodeFilter.FILTER_ACCEPT
-          : NodeFilter.FILTER_REJECT;
-      },
-    });
-    const node = walker.nextNode();
-    return node ? node.parentElement : null;
-  }
-
+  // Single text-node walk that matches both messages at once and stops as soon
+  // as both are found, rather than traversing the document twice.
   function scanHiddenState() {
-    const postsEl = findMessageElement(POSTS_REGEX);
-    const commentsEl = findMessageElement(COMMENTS_REGEX);
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let postsEl = null;
+    let commentsEl = null;
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent;
+      if (!text) continue;
+      if (!postsEl && POSTS_REGEX.test(text)) postsEl = node.parentElement;
+      if (!commentsEl && COMMENTS_REGEX.test(text)) commentsEl = node.parentElement;
+      if (postsEl && commentsEl) break;
+    }
     return { postsEl, commentsEl };
   }
 
-  function waitForHiddenMessage() {
+  function waitForHiddenMessage(signal) {
     return new Promise((resolve) => {
       let resolved = false;
       let stabilityTimer = null;
@@ -51,8 +53,11 @@
         clearTimeout(stabilityTimer);
         clearTimeout(timeoutTimer);
         observer.disconnect();
+        if (signal) signal.removeEventListener("abort", onAbort);
         resolve(state);
       };
+
+      const onAbort = () => finalize({ postsEl: null, commentsEl: null });
 
       const check = () => {
         if (resolved) return;
@@ -83,6 +88,12 @@
       };
 
       const observer = new MutationObserver(check);
+
+      if (signal) {
+        if (signal.aborted) { resolve({ postsEl: null, commentsEl: null }); return; }
+        signal.addEventListener("abort", onAbort);
+      }
+
       observer.observe(document.body, { childList: true, subtree: true, characterData: true });
       check();
 
@@ -250,13 +261,21 @@
   }
 
   async function run() {
+    // Supersede any wait still running from a previous navigation.
+    if (activeAbort) activeAbort.abort();
+    activeAbort = null;
+
     const username = parseProfileUsername();
     document.getElementById(PANEL_ID)?.remove();
     if (!username || isReservedUser(username)) return;
 
+    const ac = new AbortController();
+    activeAbort = ac;
+    const { signal } = ac;
+
     const startPath = location.pathname;
-    const { postsEl, commentsEl } = await waitForHiddenMessage();
-    if (location.pathname !== startPath) return;
+    const { postsEl, commentsEl } = await waitForHiddenMessage(signal);
+    if (signal.aborted || location.pathname !== startPath) return;
     if (!postsEl && !commentsEl) return;
 
     if (document.getElementById(PANEL_ID)) return;
