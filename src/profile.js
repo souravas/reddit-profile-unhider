@@ -37,7 +37,9 @@
     let commentsEl = null;
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const text = node.textContent;
-      if (!text) continue;
+      // Both messages contain the literal word "hidden"; this cheap substring
+      // guard skips the two regex tests for the vast majority of text nodes.
+      if (!text || !text.includes("hidden")) continue;
       if (!postsEl && POSTS_REGEX.test(text)) postsEl = node.parentElement;
       if (!commentsEl && COMMENTS_REGEX.test(text)) commentsEl = node.parentElement;
       if (postsEl && commentsEl) break;
