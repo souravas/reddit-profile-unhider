@@ -7,13 +7,15 @@ from PIL import Image
 
 HERE = Path(__file__).parent
 POPUP_PATH = HERE / "Capture.PNG"
-OUT = HERE / "screenshot-3-popup-1280x800.png"
+OUT = HERE / "screenshot-4-popup-1280x800.png"
 
 W, H = 1280, 800
 BG_DEEP_RGB = (15, 16, 18)
 
 # Where to land the popup on the canvas
 popup = Image.open(POPUP_PATH).convert("RGBA")
+# The raw capture ends mid-line; crop the partial text row off the bottom.
+popup = popup.crop((0, 0, popup.size[0], popup.size[1] - 18))
 # Scale the popup up so it reads better at viewing size (still well below 1280x800)
 SCALE = 1.6
 PW, PH = int(popup.size[0] * SCALE), int(popup.size[1] * SCALE)

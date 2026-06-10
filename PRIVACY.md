@@ -4,8 +4,9 @@ Reddit Profile Unhider does not collect, store, transmit, sell, or share any per
 
 ## What the extension does
 
-- Runs only on `reddit.com` and `sh.reddit.com` user profile pages.
-- When a profile shows the "user has hidden their posts/comments" notice, the extension sends the Reddit username visible in the URL to the public Arctic Shift archive (`https://arctic-shift.photon-reddit.com`) to retrieve that user's publicly archived posts and comments, and renders them inline in the page.
+- Runs only on `www.reddit.com`, `sh.reddit.com`, and `old.reddit.com` pages.
+- When a profile shows the "user has hidden their posts/comments" notice (or, on old Reddit, an empty profile listing), the extension sends the Reddit username visible in the URL to the public Arctic Shift archive (`https://arctic-shift.photon-reddit.com`) to retrieve that user's publicly archived posts and comments, and renders them inline in the page.
+- Inside a thread, when you click "Reveal archived" on a `[deleted]`/`[removed]` post or comment, the extension sends that post or comment's public ID to Arctic Shift to retrieve the archived copy. Nothing is sent until you click.
 - The toolbar popup accepts a Reddit username and opens `https://www.reddit.com/user/<name>/` in a new tab. The username is not transmitted anywhere by the popup itself.
 
 ## Data collection
@@ -17,12 +18,12 @@ Reddit Profile Unhider does not collect, store, transmit, sell, or share any per
 
 ## Third-party requests
 
-The extension makes HTTPS requests to `https://arctic-shift.photon-reddit.com` solely to fetch publicly archived Reddit content. Only the Reddit username being viewed (not any data about the extension's user) is included in the request. Arctic Shift's own data handling is governed by its operators.
+The extension makes HTTPS requests to `https://arctic-shift.photon-reddit.com` solely to fetch publicly archived Reddit content. Only the Reddit username being viewed, or the public ID of the post/comment being revealed (not any data about the extension's user), is included in the request. Arctic Shift's own data handling is governed by its operators.
 
 ## Permissions
 
 - **Host permission** `https://arctic-shift.photon-reddit.com/*` — required by Manifest V3 to make the cross-origin fetch above.
-- **Content script matches** `https://www.reddit.com/*` and `https://sh.reddit.com/*` — required so the extension can detect the hidden-profile notice and render results in the page.
+- **Content script matches** `https://www.reddit.com/*`, `https://sh.reddit.com/*`, and `https://old.reddit.com/*` — required so the extension can detect hidden/removed content and render results in the page.
 
 The extension does not request `tabs`, `storage`, `cookies`, `webRequest`, `identity`, or any other Chrome API permissions.
 

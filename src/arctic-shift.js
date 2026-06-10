@@ -41,10 +41,7 @@
     }
   }
 
-  async function call(path, params) {
-    const key = cacheKey(path, params);
-    const cached = cacheGet(key);
-    if (cached) return cached;
+  async function doFetch(path, params) {
     const url = new URL(`${API_BASE}${path}`);
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === null || v === "") continue;
@@ -57,17 +54,30 @@
       throw new Error(`Arctic Shift HTTP ${resp.status} for ${path}`);
     }
     const json = await resp.json();
-    const data = json && Array.isArray(json.data) ? json.data : [];
-    cachePut(key, data);
-    return data;
+    return json && Array.isArray(json.data) ? json.data : [];
   }
 
-  async function searchPostsByAuthor(author, { limit = 100 } = {}) {
-    return call("/posts/search", { author, limit, sort: "desc" });
+  // Caches the promise rather than the settled value, so concurrent calls for
+  // the same key share one request. Failed requests are evicted so errors
+  // aren't cached.
+  function call(path, params) {
+    const key = cacheKey(path, params);
+    const cached = cacheGet(key);
+    if (cached) return cached;
+    const promise = doFetch(path, params).catch((err) => {
+      if (cache.get(key) === promise) cache.delete(key);
+      throw err;
+    });
+    cachePut(key, promise);
+    return promise;
   }
 
-  async function searchCommentsByAuthor(author, { limit = 100 } = {}) {
-    return call("/comments/search", { author, limit, sort: "desc" });
+  async function searchPostsByAuthor(author, { limit = 100, before } = {}) {
+    return call("/posts/search", { author, limit, sort: "desc", before });
+  }
+
+  async function searchCommentsByAuthor(author, { limit = 100, before } = {}) {
+    return call("/comments/search", { author, limit, sort: "desc", before });
   }
 
   // Arctic Shift's /ids endpoints expect bare base-36 ids (no t1_/t3_ prefix).

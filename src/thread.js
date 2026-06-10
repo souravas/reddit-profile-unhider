@@ -139,15 +139,52 @@
     injectReveal(body, "comment", thingid);
   }
 
+  // ---- old.reddit.com (and www.reddit.com served in legacy mode) ----
+
+  // A comment's own body, excluding bodies of nested child comments (which
+  // live under a sibling .child container, after the .entry).
+  function oldOwnBody(thing) {
+    const entry = thing.querySelector(":scope > .entry");
+    return entry ? entry.querySelector(".usertext-body .md") : null;
+  }
+
+  function scanOldPost() {
+    const post = document.querySelector("#siteTable .thing.link:not([data-ru-reveal])");
+    if (!post) return;
+    const body = post.querySelector(".entry .usertext-body .md");
+    if (!body || !REMOVED_RE.test(body.textContent.trim())) return;
+    const id = (post.getAttribute("data-fullname") || "").replace(/^t3_/, "");
+    if (!id) return;
+    post.setAttribute("data-ru-reveal", "1");
+    injectReveal(body, "post", id);
+  }
+
+  function scanOldComments() {
+    for (const thing of document.querySelectorAll(".commentarea .thing.comment:not([data-ru-reveal])")) {
+      const body = oldOwnBody(thing);
+      if (!body) continue;
+      const removed = thing.classList.contains("deleted") || REMOVED_RE.test(body.textContent.trim());
+      if (!removed) continue;
+      const id = (thing.getAttribute("data-fullname") || "").replace(/^t1_/, "");
+      if (!id) continue;
+      thing.setAttribute("data-ru-reveal", "1");
+      injectReveal(body, "comment", id);
+    }
+  }
+
   function scanRemoved() {
     if (!isThreadPath()) {
       teardown();
       return;
     }
+    // Both DOM dialects are scanned; on each page only one set of selectors
+    // matches, so the other is a no-op.
     scanPost();
     for (const comment of document.querySelectorAll("shreddit-comment:not([data-ru-reveal])")) {
       scanComment(comment);
     }
+    scanOldPost();
+    scanOldComments();
   }
 
   function scheduleScan() {

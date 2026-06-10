@@ -195,6 +195,22 @@
   font-style: italic;
 }
 
+.ru-load-more {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  display: block;
+  margin: 10px auto 0;
+  padding: 6px 16px;
+  background: transparent;
+  color: var(--ru-accent);
+  border: 1px solid var(--ru-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ru-load-more:hover:not(:disabled) { background: var(--ru-bg-soft); border-color: var(--ru-accent); }
+.ru-load-more:disabled { color: var(--ru-fg-muted); cursor: default; }
+
 .ru-hidden { display: none !important; }
 
 /* ---- In-thread reveal of removed/deleted posts & comments ---- */

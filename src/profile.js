@@ -121,10 +121,22 @@
     });
   }
 
+  // Climb from the message element through wrappers that exist solely for it,
+  // stopping before an ancestor that holds other meaningful content — so the
+  // panel lands right below the notice block, not below unrelated siblings.
+  // (A fixed-depth climb breaks whenever Reddit changes its wrapper nesting.)
   function findInsertionAnchor(messageEl) {
     let node = messageEl;
-    for (let i = 0; i < 4 && node.parentElement; i++) {
-      node = node.parentElement;
+    const msgLen = (messageEl.textContent || "").trim().length;
+    for (let i = 0; i < 6; i++) {
+      const parent = node.parentElement;
+      if (!parent || parent === document.body || parent === document.documentElement) break;
+      const tag = parent.tagName;
+      if (tag === "MAIN" || tag === "ARTICLE" || tag === "SHREDDIT-APP") break;
+      // The slack covers small decorations like the "Welcome!" heading; a
+      // parent with substantially more text has real siblings — stop short.
+      if ((parent.textContent || "").trim().length > msgLen + 120) break;
+      node = parent;
     }
     return node;
   }
@@ -237,68 +249,107 @@
     return panel;
   }
 
-  async function fillPostsSection(slot, username) {
-    slot.append(el("p", { class: "ru-slot--loading" }, "Loading posts from archive…"));
+  const PAGE_SIZE = 100;
+
+  const SECTIONS = {
+    posts: {
+      noun: "posts",
+      label: "Posts",
+      fetchPage: (username, before) =>
+        Arctic.searchPostsByAuthor(username, { limit: PAGE_SIZE, before }),
+      renderItem: renderPostItem,
+    },
+    comments: {
+      noun: "comments",
+      label: "Comments",
+      fetchPage: (username, before) =>
+        Arctic.searchCommentsByAuthor(username, { limit: PAGE_SIZE, before }),
+      renderItem: renderCommentItem,
+    },
+  };
+
+  async function fillSection(slot, username, kind) {
+    const { noun, label, fetchPage, renderItem } = SECTIONS[kind];
+    slot.append(el("p", { class: "ru-slot--loading" }, `Loading ${noun} from archive…`));
+
+    const seen = new Set();
+    let total = 0;
+    let oldestUtc = Infinity;
+
+    const appendBatch = (list, items) => {
+      let added = 0;
+      for (const item of items) {
+        if (item.id) {
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
+        }
+        if (typeof item.created_utc === "number" && item.created_utc < oldestUtc) {
+          oldestUtc = item.created_utc;
+        }
+        list.append(renderItem(item));
+        added++;
+      }
+      total += added;
+      return added;
+    };
+
     try {
-      const posts = await Arctic.searchPostsByAuthor(username, { limit: 100 });
-      slot.innerHTML = "";
-      slot.append(
-        el("h3", { class: "ru-section-h" }, `Posts (${posts.length === 100 ? "100+" : posts.length})`)
-      );
-      if (posts.length === 0) {
-        slot.append(el("p", { class: "ru-empty" }, "Archive has no posts for this user."));
+      const first = await fetchPage(username, undefined);
+      slot.replaceChildren();
+      const heading = el("h3", { class: "ru-section-h" }, label);
+      slot.append(heading);
+      if (first.length === 0) {
+        slot.append(el("p", { class: "ru-empty" }, `Archive has no ${noun} for this user.`));
         return;
       }
       const list = el("ul", { class: "ru-list" });
-      for (const p of posts) list.append(renderPostItem(p));
       slot.append(list);
+      appendBatch(list, first);
+
+      let hasMore = first.length >= PAGE_SIZE && oldestUtc !== Infinity;
+      const updateHeading = () => {
+        heading.textContent = `${label} (${total}${hasMore ? "+" : ""})`;
+      };
+      updateHeading();
+      if (!hasMore) return;
+
+      const moreBtn = el("button", { type: "button", class: "ru-load-more" }, `Load older ${noun}`);
+      slot.append(moreBtn);
+      moreBtn.addEventListener("click", async () => {
+        slot.querySelectorAll(".ru-more-error").forEach((n) => n.remove());
+        moreBtn.disabled = true;
+        moreBtn.textContent = "Loading…";
+        try {
+          // before is exclusive; +1 re-includes items sharing the boundary
+          // second, and the id set drops the repeats — nothing gets skipped.
+          const batch = await fetchPage(username, Math.floor(oldestUtc) + 1);
+          const added = appendBatch(list, batch);
+          hasMore = batch.length >= PAGE_SIZE && added > 0;
+          updateHeading();
+          if (hasMore) {
+            moreBtn.disabled = false;
+            moreBtn.textContent = `Load older ${noun}`;
+          } else {
+            moreBtn.remove();
+          }
+        } catch (err) {
+          moreBtn.disabled = false;
+          moreBtn.textContent = `Load older ${noun}`;
+          moreBtn.insertAdjacentElement(
+            "beforebegin",
+            el("p", { class: "ru-empty ru-empty--error ru-more-error" },
+              `Couldn't load more: ` + (err.message || err))
+          );
+        }
+      });
     } catch (err) {
-      slot.innerHTML = "";
-      slot.append(el("h3", { class: "ru-section-h" }, "Posts"));
-      slot.append(el("p", { class: "ru-empty ru-empty--error" }, "Couldn't load posts: " + (err.message || err)));
+      slot.replaceChildren();
+      slot.append(el("h3", { class: "ru-section-h" }, label));
+      slot.append(el("p", { class: "ru-empty ru-empty--error" }, `Couldn't load ${noun}: ` + (err.message || err)));
     }
   }
 
-  async function fillCommentsSection(slot, username) {
-    slot.append(el("p", { class: "ru-slot--loading" }, "Loading comments from archive…"));
-    try {
-      const comments = await Arctic.searchCommentsByAuthor(username, { limit: 100 });
-      slot.innerHTML = "";
-      slot.append(
-        el("h3", { class: "ru-section-h" }, `Comments (${comments.length === 100 ? "100+" : comments.length})`)
-      );
-      if (comments.length === 0) {
-        slot.append(el("p", { class: "ru-empty" }, "Archive has no comments for this user."));
-        return;
-      }
-      const list = el("ul", { class: "ru-list" });
-      for (const c of comments) list.append(renderCommentItem(c));
-      slot.append(list);
-    } catch (err) {
-      slot.innerHTML = "";
-      slot.append(el("h3", { class: "ru-section-h" }, "Comments"));
-      slot.append(el("p", { class: "ru-empty ru-empty--error" }, "Couldn't load comments: " + (err.message || err)));
-    }
-  }
-
-  async function run() {
-    // Supersede any wait still running from a previous navigation.
-    if (activeAbort) activeAbort.abort();
-    activeAbort = null;
-
-    const username = parseProfileUsername();
-    document.getElementById(PANEL_ID)?.remove();
-    if (!username || isReservedUser(username)) return;
-
-    const ac = new AbortController();
-    activeAbort = ac;
-    const { signal } = ac;
-
-    const startPath = location.pathname;
-    const { postsEl, commentsEl } = await waitForHiddenMessage(signal);
-    if (signal.aborted || location.pathname !== startPath) return;
-    if (!postsEl && !commentsEl) return;
-
+  async function insertPanel(username, postsEl, commentsEl) {
     if (document.getElementById(PANEL_ID)) return;
 
     const panel = buildPanel(username, !!postsEl, !!commentsEl);
@@ -313,9 +364,39 @@
     findInsertionAnchor(anchorEl).insertAdjacentElement("afterend", panel);
 
     await Promise.allSettled([
-      postsSlot ? fillPostsSection(postsSlot, username) : Promise.resolve(),
-      commentsSlot ? fillCommentsSection(commentsSlot, username) : Promise.resolve(),
+      postsSlot ? fillSection(postsSlot, username, "posts") : Promise.resolve(),
+      commentsSlot ? fillSection(commentsSlot, username, "comments") : Promise.resolve(),
     ]);
+  }
+
+  async function run() {
+    // Supersede any wait still running from a previous navigation.
+    if (activeAbort) activeAbort.abort();
+    activeAbort = null;
+
+    const username = parseProfileUsername();
+    document.getElementById(PANEL_ID)?.remove();
+    if (!username || isReservedUser(username)) return;
+
+    // old.reddit.com (or www served in legacy mode) has no "keeps their posts
+    // hidden" notice — a hidden profile just renders the empty-listing marker.
+    // The page is server-rendered, so a synchronous check is enough.
+    const oldRedditMarker = document.getElementById("noresults");
+    if (oldRedditMarker) {
+      await insertPanel(username, oldRedditMarker, oldRedditMarker);
+      return;
+    }
+
+    const ac = new AbortController();
+    activeAbort = ac;
+    const { signal } = ac;
+
+    const startPath = location.pathname;
+    const { postsEl, commentsEl } = await waitForHiddenMessage(signal);
+    if (signal.aborted || location.pathname !== startPath) return;
+    if (!postsEl && !commentsEl) return;
+
+    await insertPanel(username, postsEl, commentsEl);
   }
 
   window.RU_Profile = { run };
