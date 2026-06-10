@@ -1,0 +1,34 @@
+Ever land on a Reddit profile only to see "u/username likes to keep their posts hidden"? This extension fixes that instantly.
+
+Reddit Profile Unhider automatically reveals the posts and comments a user has chosen to hide on their profile. The moment you open a hidden profile, it fetches the user's public activity from a public Reddit archive and displays it right on the page. No buttons, no copy-pasting usernames into other sites, no extra tabs.
+
+What it does
+• Detects when a Reddit profile is hidden and automatically loads the missing posts and comments
+• Shows results inline, directly below Reddit's "hidden" message
+• Reveals [deleted] and [removed] posts and comments inside threads — a "Reveal archived" button appears next to each one, click it to restore the original author and text in place
+• "Load older" buttons let you page back through a user's full archived history
+• Includes a toolbar popup so you can look up any username on demand
+• Works on new Reddit (reddit.com, sh.reddit.com) and old.reddit.com
+• Works seamlessly as you click between profiles (no page reload needed)
+
+Why install it
+• See what someone has actually posted before engaging with them
+• Read deleted or removed posts and comments that are still preserved in the public archive
+• Research users without leaving Reddit or signing up for third-party tools
+• Recover context on conversations where the OP later hid their profile or deleted their posts
+• Spot patterns from accounts that hide their history (useful for moderators and researchers)
+
+Privacy first
+• No tracking, no analytics, no account required
+• No access to your cookies, history, tabs, or storage
+• Only contacts the public Reddit archive — and only when you open a hidden profile or click a "Reveal archived" button
+
+Limitations to know
+• Posts deleted within minutes of being created may not be archived
+• Loads 100 posts and 100 comments at a time; use "Load older" to page further back
+• On old Reddit there is no "hidden profile" notice, so the panel is offered on any empty profile
+
+Open source. Not affiliated with Reddit.
+
+Open source — review the code, file issues, or contribute:
+https://github.com/souravas/reddit-profile-unhider

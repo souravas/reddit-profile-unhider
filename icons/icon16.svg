@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E3039"/>
+      <stop offset="1" stop-color="#101117"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="48%" r="60%">
+      <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.7"/>
+      <stop offset="0.6" stop-color="#FF4500" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#FF4500" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="iris" cx="50%" cy="36%" r="70%">
+      <stop offset="0" stop-color="#FFC56F"/>
+      <stop offset="0.45" stop-color="#FF7A1F"/>
+      <stop offset="0.8" stop-color="#E84A00"/>
+      <stop offset="1" stop-color="#B83400"/>
+    </radialGradient>
+    <clipPath id="squircle">
+      <rect width="128" height="128" rx="30" ry="30"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <rect width="128" height="128" fill="url(#bg)"/>
+    <rect width="128" height="128" fill="url(#glow)"/>
+    <path d="M 4 64 Q 64 -2 124 64 Q 64 130 4 64 Z" fill="#FFFFFF"/>
+    <circle cx="64" cy="64" r="33" fill="#8A2300"/>
+    <circle cx="64" cy="64" r="30.5" fill="url(#iris)"/>
+    <circle cx="64" cy="64" r="13.5" fill="#120804"/>
+    <circle cx="53" cy="53" r="8" fill="#FFFFFF"/>
+  </g>
+</svg>

@@ -1,48 +1,67 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FF6A2A"/>
-      <stop offset="1" stop-color="#E03A0B"/>
+      <stop offset="0" stop-color="#2E3039"/>
+      <stop offset="1" stop-color="#101117"/>
     </linearGradient>
-    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff" stop-opacity="0.18"/>
-      <stop offset="0.55" stop-color="#fff" stop-opacity="0"/>
+    <radialGradient id="glow" cx="50%" cy="48%" r="58%">
+      <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#FF4500" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FF4500" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sclera" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.75" stop-color="#F2F3F6"/>
+      <stop offset="1" stop-color="#D8DCE4"/>
     </linearGradient>
-    <radialGradient id="iris" cx="50%" cy="42%" r="58%">
-      <stop offset="0" stop-color="#3a3f4a"/>
-      <stop offset="0.7" stop-color="#15171c"/>
-      <stop offset="1" stop-color="#000"/>
+    <radialGradient id="iris" cx="50%" cy="36%" r="70%">
+      <stop offset="0" stop-color="#FFC56F"/>
+      <stop offset="0.45" stop-color="#FF7A1F"/>
+      <stop offset="0.8" stop-color="#E84A00"/>
+      <stop offset="1" stop-color="#B83400"/>
     </radialGradient>
-    <radialGradient id="eyeShade" cx="50%" cy="15%" r="85%">
-      <stop offset="0" stop-color="#000" stop-opacity="0.20"/>
-      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+    <radialGradient id="pupil" cx="42%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#3A2A22"/>
+      <stop offset="0.5" stop-color="#150B06"/>
+      <stop offset="1" stop-color="#000000"/>
     </radialGradient>
-    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="1.8"/>
-      <feOffset dx="0" dy="1.8" result="b"/>
-      <feComponentTransfer><feFuncA type="linear" slope="0.45"/></feComponentTransfer>
-      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
+    <linearGradient id="lidShadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect width="128" height="128" rx="30" ry="30"/>
+    </clipPath>
+    <clipPath id="eyeClip">
+      <path d="M 10 64 Q 64 6 118 64 Q 64 122 10 64 Z"/>
+    </clipPath>
   </defs>
 
-  <!-- Background squircle with gradient + soft top sheen -->
-  <rect width="128" height="128" rx="28" ry="28" fill="url(#bg)"/>
-  <rect width="128" height="128" rx="28" ry="28" fill="url(#sheen)"/>
+  <g clip-path="url(#squircle)">
+    <rect width="128" height="128" fill="url(#bg)"/>
+    <rect width="128" height="128" fill="url(#glow)"/>
 
-  <!-- Eye: wider and taller almond so it stays legible at 16px -->
-  <g filter="url(#softShadow)">
-    <path d="M 14 64 Q 64 14 114 64 Q 64 114 14 64 Z" fill="#fdfdfd"/>
-    <path d="M 14 64 Q 64 14 114 64 Q 64 114 14 64 Z" fill="url(#eyeShade)"/>
+    <!-- Eye sclera -->
+    <path d="M 10 64 Q 64 6 118 64 Q 64 122 10 64 Z" fill="url(#sclera)"/>
+
+    <!-- Upper lid shadow -->
+    <g clip-path="url(#eyeClip)">
+      <path d="M 10 64 Q 64 6 118 64 Q 64 34 10 64 Z" fill="url(#lidShadow)"/>
+    </g>
+
+    <!-- Iris with limbal ring -->
+    <circle cx="64" cy="64" r="30" fill="#8A2300"/>
+    <circle cx="64" cy="64" r="28" fill="url(#iris)"/>
+    <!-- Pupil -->
+    <circle cx="64" cy="64" r="12.5" fill="url(#pupil)"/>
+    <!-- Catchlights -->
+    <circle cx="54" cy="54" r="6.2" fill="#FFFFFF" opacity="0.96"/>
+    <circle cx="73" cy="71" r="2.6" fill="#FFFFFF" opacity="0.6"/>
+
+    <!-- Eye outline -->
+    <path d="M 10 64 Q 64 6 118 64 Q 64 122 10 64 Z" fill="none" stroke="#0B0C10" stroke-opacity="0.35" stroke-width="1.5"/>
+
+    <!-- Top inner edge highlight -->
+    <rect x="1" y="1" width="126" height="126" rx="29" ry="29" fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="2"/>
   </g>
-
-  <!-- Iris -->
-  <circle cx="64" cy="64" r="26" fill="url(#iris)"/>
-  <!-- Pupil -->
-  <circle cx="64" cy="64" r="12" fill="#000"/>
-  <!-- Catchlights -->
-  <circle cx="56" cy="56" r="5.5" fill="#fff" opacity="0.95"/>
-  <circle cx="72" cy="71" r="2" fill="#fff" opacity="0.65"/>
-
-  <!-- Subtle upper lid shadow for definition -->
-  <path d="M 16 64 Q 64 16 112 64" fill="none" stroke="#000" stroke-opacity="0.16" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

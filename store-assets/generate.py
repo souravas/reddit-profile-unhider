@@ -51,14 +51,39 @@ def shared_defs() -> str:
         <stop offset="0.6" stop-color="{BG_DEEP}" stop-opacity="1"/>
         <stop offset="1" stop-color="#06070A" stop-opacity="1"/>
       </radialGradient>
-      <radialGradient id="iris" cx="50%" cy="42%" r="58%">
-        <stop offset="0" stop-color="#3a3f4a"/>
-        <stop offset="0.7" stop-color="#15171c"/>
-        <stop offset="1" stop-color="#000"/>
+      <linearGradient id="iconBg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#2E3039"/>
+        <stop offset="1" stop-color="#101117"/>
+      </linearGradient>
+      <radialGradient id="iconGlowIn" cx="50%" cy="48%" r="58%">
+        <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.55"/>
+        <stop offset="0.6" stop-color="#FF4500" stop-opacity="0.18"/>
+        <stop offset="1" stop-color="#FF4500" stop-opacity="0"/>
       </radialGradient>
-      <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#fff" stop-opacity="0.18"/>
-        <stop offset="0.55" stop-color="#fff" stop-opacity="0"/>
+      <radialGradient id="iconHalo" cx="50%" cy="50%" r="50%">
+        <stop offset="0.45" stop-color="#FF5A1F" stop-opacity="0.32"/>
+        <stop offset="0.75" stop-color="#FF4500" stop-opacity="0.10"/>
+        <stop offset="1" stop-color="#FF4500" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="iconSclera" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFFFFF"/>
+        <stop offset="0.75" stop-color="#F2F3F6"/>
+        <stop offset="1" stop-color="#D8DCE4"/>
+      </linearGradient>
+      <radialGradient id="iris" cx="50%" cy="36%" r="70%">
+        <stop offset="0" stop-color="#FFC56F"/>
+        <stop offset="0.45" stop-color="#FF7A1F"/>
+        <stop offset="0.8" stop-color="#E84A00"/>
+        <stop offset="1" stop-color="#B83400"/>
+      </radialGradient>
+      <radialGradient id="iconPupil" cx="42%" cy="38%" r="70%">
+        <stop offset="0" stop-color="#3A2A22"/>
+        <stop offset="0.5" stop-color="#150B06"/>
+        <stop offset="1" stop-color="#000000"/>
+      </radialGradient>
+      <linearGradient id="iconLid" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#000000" stop-opacity="0.25"/>
+        <stop offset="1" stop-color="#000000" stop-opacity="0"/>
       </linearGradient>
       <filter id="iconShadow" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
@@ -70,48 +95,57 @@ def shared_defs() -> str:
     """
 
 
-def app_icon(cx: float, cy: float, size: float, shadow: bool = True) -> str:
-    """Render the extension icon centered at (cx, cy)."""
+def app_icon(cx: float, cy: float, size: float, shadow: bool = True, halo: bool = True) -> str:
+    """Render the extension icon centered at (cx, cy). Mirrors icons/icon.svg."""
     s = size
     x = cx - s / 2
     y = cy - s / 2
-    r = s * (28 / 128)
-    eye_left = x + s * (14 / 128)
-    eye_right = x + s * (114 / 128)
-    eye_mid_y = y + s * (64 / 128)
-    iris_r = s * (26 / 128)
-    pupil_r = s * (12 / 128)
-    cl_r = s * (5.5 / 128)
+    u = s / 128  # one icon-design unit
+    r = 30 * u
+    eye_left = x + 10 * u
+    eye_right = x + 118 * u
+    top_ctl = y + 6 * u
+    bot_ctl = y + 122 * u
+    lid_ctl = y + 34 * u
     filt = 'filter="url(#iconShadow)"' if shadow else ""
+    halo_svg = (
+        f'<circle cx="{cx}" cy="{cy}" r="{s * 0.85}" fill="url(#iconHalo)"/>' if halo else ""
+    )
     return f"""
+    {halo_svg}
     <g {filt}>
-      <rect x="{x}" y="{y}" width="{s}" height="{s}" rx="{r}" ry="{r}" fill="url(#brand)"/>
-      <rect x="{x}" y="{y}" width="{s}" height="{s}" rx="{r}" ry="{r}" fill="url(#sheen)"/>
-      <path d="M {eye_left} {eye_mid_y}
-               Q {cx} {y + s * (14 / 128)} {eye_right} {eye_mid_y}
-               Q {cx} {y + s * (114 / 128)} {eye_left} {eye_mid_y} Z"
-            fill="#fdfdfd"/>
-      <circle cx="{cx}" cy="{eye_mid_y}" r="{iris_r}" fill="url(#iris)"/>
-      <circle cx="{cx}" cy="{eye_mid_y}" r="{pupil_r}" fill="#000"/>
-      <circle cx="{cx - s * (8/128)}" cy="{eye_mid_y - s * (8/128)}" r="{cl_r}" fill="#fff" opacity="0.95"/>
-      <path d="M {x + s * (16/128)} {eye_mid_y}
-               Q {cx} {y + s * (16/128)} {x + s * (112/128)} {eye_mid_y}"
-            fill="none" stroke="#000" stroke-opacity="0.16"
-            stroke-width="{s * (2.5/128)}" stroke-linecap="round"/>
+      <rect x="{x}" y="{y}" width="{s}" height="{s}" rx="{r}" ry="{r}" fill="url(#iconBg)"/>
+      <rect x="{x}" y="{y}" width="{s}" height="{s}" rx="{r}" ry="{r}" fill="url(#iconGlowIn)"/>
+      <path d="M {eye_left} {cy} Q {cx} {top_ctl} {eye_right} {cy}
+               Q {cx} {bot_ctl} {eye_left} {cy} Z" fill="url(#iconSclera)"/>
+      <path d="M {eye_left} {cy} Q {cx} {top_ctl} {eye_right} {cy}
+               Q {cx} {lid_ctl} {eye_left} {cy} Z" fill="url(#iconLid)"/>
+      <circle cx="{cx}" cy="{cy}" r="{30 * u}" fill="#8A2300"/>
+      <circle cx="{cx}" cy="{cy}" r="{28 * u}" fill="url(#iris)"/>
+      <circle cx="{cx}" cy="{cy}" r="{12.5 * u}" fill="url(#iconPupil)"/>
+      <circle cx="{cx - 10 * u}" cy="{cy - 10 * u}" r="{6.2 * u}" fill="#fff" opacity="0.96"/>
+      <circle cx="{cx + 9 * u}" cy="{cy + 7 * u}" r="{2.6 * u}" fill="#fff" opacity="0.6"/>
+      <path d="M {eye_left} {cy} Q {cx} {top_ctl} {eye_right} {cy}
+               Q {cx} {bot_ctl} {eye_left} {cy} Z"
+            fill="none" stroke="#0B0C10" stroke-opacity="0.35" stroke-width="{1.5 * u}"/>
+      <rect x="{x + u}" y="{y + u}" width="{s - 2 * u}" height="{s - 2 * u}"
+            rx="{r - u}" ry="{r - u}" fill="none"
+            stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="{2 * u}"/>
     </g>
     """
 
 
 def render(svg: str, w: int, h: int, out_path: Path) -> None:
-    """Rasterize SVG and flatten to 24-bit (RGB, no alpha) PNG."""
+    """Rasterize SVG at 2x, downsample with Lanczos, flatten to 24-bit PNG."""
     png_bytes = cairosvg.svg2png(
         bytestring=svg.encode("utf-8"),
-        output_width=w,
-        output_height=h,
+        output_width=w * 2,
+        output_height=h * 2,
     )
     img = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
     flat = Image.new("RGB", img.size, (15, 16, 18))  # BG_DEEP, must match design
     flat.paste(img, mask=img.split()[3])
+    flat = flat.resize((w, h), Image.LANCZOS)
     flat.save(out_path, "PNG", optimize=True)
     print(f"  wrote {out_path.name}  ({flat.size[0]}x{flat.size[1]}, mode={flat.mode})")
 
@@ -133,7 +167,7 @@ def browser_frame(x: float, y: float, w: float, h: float, url: str) -> str:
             fill="#0F0F10" stroke="{BORDER}"/>
       <text x="{x + 108}" y="{y + 27}" font-family="{MONO}" font-size="11" fill="{TEXT_LOW}">{escape(url)}</text>
       <g transform="translate({x + w - 70}, {y + 10})">
-        {app_icon(12, 12, 24, shadow=False)}
+        {app_icon(12, 12, 24, shadow=False, halo=False)}
       </g>
     """
 

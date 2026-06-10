@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Reddit Profile Unhider",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Reveal Reddit content that's been hidden on a user's profile, removed by mods, or deleted.",
   "host_permissions": [
     "https://arctic-shift.photon-reddit.com/*"

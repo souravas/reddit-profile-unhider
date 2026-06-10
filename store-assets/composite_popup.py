@@ -1,25 +1,35 @@
-"""Composite the raw popup capture onto a 1280x800 store-screenshot frame."""
+"""Composite the raw popup capture onto a 1280x800 store-screenshot frame.
+
+The capture is taken from src/popup.html at 4x zoom (dark theme) so it stays
+crisp when scaled. Retake it with a headless browser at body zoom 4 if the
+popup UI changes. The whole canvas is rendered at 2x and Lanczos-downsampled.
+"""
 import io
 from pathlib import Path
 
 import cairosvg
-from PIL import Image
+from PIL import Image, ImageDraw
 
 HERE = Path(__file__).parent
-POPUP_PATH = HERE / "Capture.PNG"
+POPUP_PATH = HERE / "popup-capture-4x.png"
 OUT = HERE / "screenshot-4-popup-1280x800.png"
 
 W, H = 1280, 800
+SS = 2  # supersample factor for the final canvas
 BG_DEEP_RGB = (15, 16, 18)
 
-# Where to land the popup on the canvas
+# Logical (1x) size the popup should occupy on the canvas
+LOGICAL_PW = 480
+
 popup = Image.open(POPUP_PATH).convert("RGBA")
-# The raw capture ends mid-line; crop the partial text row off the bottom.
-popup = popup.crop((0, 0, popup.size[0], popup.size[1] - 18))
-# Scale the popup up so it reads better at viewing size (still well below 1280x800)
-SCALE = 1.6
-PW, PH = int(popup.size[0] * SCALE), int(popup.size[1] * SCALE)
-popup = popup.resize((PW, PH), Image.LANCZOS)
+PW, PH = LOGICAL_PW, round(popup.size[1] * LOGICAL_PW / popup.size[0])
+popup = popup.resize((PW * SS, PH * SS), Image.LANCZOS)
+
+# Round the popup corners like a real Chrome popup
+radius = 10 * SS
+mask = Image.new("L", popup.size, 0)
+ImageDraw.Draw(mask).rounded_rectangle((0, 0, popup.size[0] - 1, popup.size[1] - 1), radius, fill=255)
+popup.putalpha(mask)
 
 # Toolbar icon position (pinned to right side of stylized browser chrome)
 TOOLBAR_Y = 170
@@ -30,10 +40,6 @@ POPUP_Y = TOOLBAR_Y + TOOLBAR_H + 14
 
 bg_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">
   <defs>
-    <linearGradient id="brand" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FF6A2A"/>
-      <stop offset="1" stop-color="#E03A0B"/>
-    </linearGradient>
     <linearGradient id="brandH" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#FF6A2A"/>
       <stop offset="1" stop-color="#E03A0B"/>
@@ -46,6 +52,21 @@ bg_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" vi
     <radialGradient id="iconGlow" cx="50%" cy="50%" r="60%">
       <stop offset="0" stop-color="#FF6A2A" stop-opacity="0.45"/>
       <stop offset="1" stop-color="#FF6A2A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="iconBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E3039"/>
+      <stop offset="1" stop-color="#101117"/>
+    </linearGradient>
+    <radialGradient id="iconGlowIn" cx="50%" cy="48%" r="58%">
+      <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#FF4500" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FF4500" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="iris" cx="50%" cy="36%" r="70%">
+      <stop offset="0" stop-color="#FFC56F"/>
+      <stop offset="0.45" stop-color="#FF7A1F"/>
+      <stop offset="0.8" stop-color="#E84A00"/>
+      <stop offset="1" stop-color="#B83400"/>
     </radialGradient>
   </defs>
   <rect width="{W}" height="{H}" fill="url(#bgGlow)"/>
@@ -73,14 +94,16 @@ bg_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" vi
   <text x="206" y="{TOOLBAR_Y + 34}" font-family="DejaVu Sans Mono, monospace"
         font-size="12" fill="#9A9A9C">reddit.com</text>
 
-  <!-- pinned extension icon (highlighted) -->
+  <!-- pinned extension icon (highlighted), mirrors icons/icon.svg -->
   <circle cx="{ICON_CX}" cy="{TOOLBAR_Y + TOOLBAR_H / 2}" r="34" fill="url(#iconGlow)"/>
   <g transform="translate({ICON_CX - 18}, {TOOLBAR_Y + TOOLBAR_H / 2 - 18})">
-    <rect width="36" height="36" rx="8" fill="url(#brand)"/>
-    <path d="M 4 18 Q 18 4 32 18 Q 18 32 4 18 Z" fill="#fdfdfd"/>
-    <circle cx="18" cy="18" r="7" fill="#15171c"/>
-    <circle cx="18" cy="18" r="3.4" fill="#000"/>
-    <circle cx="16" cy="16" r="1.6" fill="#fff"/>
+    <rect width="36" height="36" rx="8.4" fill="url(#iconBg)"/>
+    <rect width="36" height="36" rx="8.4" fill="url(#iconGlowIn)"/>
+    <path d="M 2.8 18 Q 18 1.7 33.2 18 Q 18 34.3 2.8 18 Z" fill="#fff"/>
+    <circle cx="18" cy="18" r="8.4" fill="#8A2300"/>
+    <circle cx="18" cy="18" r="7.9" fill="url(#iris)"/>
+    <circle cx="18" cy="18" r="3.5" fill="#150B06"/>
+    <circle cx="15.2" cy="15.2" r="1.7" fill="#fff"/>
   </g>
 
   <!-- subtle caret connecting toolbar icon to popup (drawn so it lands under the popup top edge) -->
@@ -129,14 +152,15 @@ bg_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" vi
   </g>
 </svg>"""
 
-bg_png = cairosvg.svg2png(bytestring=bg_svg.encode("utf-8"), output_width=W, output_height=H)
+bg_png = cairosvg.svg2png(bytestring=bg_svg.encode("utf-8"), output_width=W * SS, output_height=H * SS)
 canvas = Image.open(io.BytesIO(bg_png)).convert("RGBA")
 
 # Paste the real popup capture
-canvas.paste(popup, (POPUP_X, POPUP_Y), popup)
+canvas.paste(popup, (POPUP_X * SS, POPUP_Y * SS), popup)
 
-# Flatten to 24-bit RGB (no alpha)
+# Flatten to 24-bit RGB (no alpha) and downsample to the store size
 flat = Image.new("RGB", canvas.size, BG_DEEP_RGB)
 flat.paste(canvas, mask=canvas.split()[3])
+flat = flat.resize((W, H), Image.LANCZOS)
 flat.save(OUT, "PNG", optimize=True)
 print(f"wrote {OUT.name}  ({flat.size[0]}x{flat.size[1]}, mode={flat.mode})")
