@@ -350,7 +350,8 @@
   }
 
   async function insertPanel(username, postsEl, commentsEl) {
-    if (document.getElementById(PANEL_ID)) return;
+    const existing = document.getElementById(PANEL_ID);
+    if (existing) return existing;
 
     const panel = buildPanel(username, !!postsEl, !!commentsEl);
     const body = panel.querySelector(".ru-panel__body");
@@ -367,7 +368,40 @@
       postsSlot ? fillSection(postsSlot, username, "posts") : Promise.resolve(),
       commentsSlot ? fillSection(commentsSlot, username, "comments") : Promise.resolve(),
     ]);
+    return panel;
   }
+
+  // Resolves when the panel is no longer in the document (Reddit swapped out
+  // the content region it was anchored in) or the run is superseded. Each
+  // mutation batch costs one isConnected check — no tree walk.
+  function waitForPanelRemoval(panel, signal) {
+    return new Promise((resolve) => {
+      if (signal.aborted || !panel.isConnected) {
+        resolve();
+        return;
+      }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        observer.disconnect();
+        signal.removeEventListener("abort", finish);
+        resolve();
+      };
+      const observer = new MutationObserver(() => {
+        if (!panel.isConnected) finish();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      signal.addEventListener("abort", finish);
+    });
+  }
+
+  // When the user switches profile tabs, Reddit swaps the content in
+  // asynchronously — a scan can match the outgoing tab's notice, anchoring the
+  // panel to a node the pending swap then destroys. Capped so a pathological
+  // page that keeps churning the DOM can't make us refetch from the archive
+  // forever.
+  const MAX_PANEL_INSERTS = 5;
 
   async function run() {
     // Supersede any wait still running from a previous navigation.
@@ -380,7 +414,7 @@
 
     // old.reddit.com (or www served in legacy mode) has no "keeps their posts
     // hidden" notice — a hidden profile just renders the empty-listing marker.
-    // The page is server-rendered, so a synchronous check is enough.
+    // The page is server-rendered and static, so one synchronous pass is enough.
     const oldRedditMarker = document.getElementById("noresults");
     if (oldRedditMarker) {
       await insertPanel(username, oldRedditMarker, oldRedditMarker);
@@ -390,13 +424,20 @@
     const ac = new AbortController();
     activeAbort = ac;
     const { signal } = ac;
-
     const startPath = location.pathname;
-    const { postsEl, commentsEl } = await waitForHiddenMessage(signal);
-    if (signal.aborted || location.pathname !== startPath) return;
-    if (!postsEl && !commentsEl) return;
 
-    await insertPanel(username, postsEl, commentsEl);
+    // Reconcile until the DOM settles: find the notice, insert the panel, and
+    // if a late content swap sweeps the panel away while we're still on the
+    // same path, scan again and re-anchor it in the new content.
+    for (let attempt = 0; attempt < MAX_PANEL_INSERTS; attempt++) {
+      const { postsEl, commentsEl } = await waitForHiddenMessage(signal);
+      if (signal.aborted || location.pathname !== startPath) return;
+      if (!postsEl && !commentsEl) return;
+
+      const panel = await insertPanel(username, postsEl, commentsEl);
+      if (panel) await waitForPanelRemoval(panel, signal);
+      if (signal.aborted || location.pathname !== startPath) return;
+    }
   }
 
   window.RU_Profile = { run };

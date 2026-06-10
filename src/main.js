@@ -3,14 +3,18 @@
 (function () {
   const RUN_DEBOUNCE_MS = 300;
   let pending = null;
-  let lastHref = location.href;
+  // null forces the initial dispatch; afterwards dispatch only fires when the
+  // href actually changed, so navigate events for canceled or cross-document
+  // navigations don't tear down and rebuild the panel for nothing.
+  let lastDispatchedHref = null;
 
   function isProfileRoute() {
     return /^\/(?:user|u)\/[^\/]+/i.test(location.pathname);
   }
 
   function dispatch() {
-    lastHref = location.href;
+    if (location.href === lastDispatchedHref) return;
+    lastDispatchedHref = location.href;
     document.getElementById("ru-profile-panel")?.remove();
     if (isProfileRoute()) {
       window.RU_Profile.run().catch((err) => console.warn("[unhider] profile run failed", err));
@@ -33,34 +37,23 @@
   }
 
   function notifyLocationChange() {
-    if (location.href === lastHref) return;
-    lastHref = location.href;
-    scheduleDispatch();
+    if (location.href !== lastDispatchedHref) scheduleDispatch();
   }
 
-  // Primary signal across all engines: Reddit's SPA router navigates via the
-  // History API, and popstate covers back/forward.
-  for (const method of ["pushState", "replaceState"]) {
-    const original = history[method];
-    history[method] = function () {
-      const result = original.apply(this, arguments);
-      notifyLocationChange();
-      return result;
-    };
-  }
+  // Content scripts run in an isolated world with their own History wrapper,
+  // so patching history.pushState here never sees the page's own calls —
+  // Reddit's SPA router is invisible to a History patch from this side. The
+  // Navigation API (Chrome 102+) does fire in the isolated world for every
+  // navigation, but with two traps: destination.sameDocument is false for link
+  // clicks the page's router intercept()s into a soft navigation (exactly how
+  // Reddit switches profile tabs), and the URL hasn't committed yet when the
+  // event fires. So don't filter on the event at all — schedule, and let the
+  // debounced dispatch compare hrefs once the navigation has settled.
   window.addEventListener("popstate", notifyLocationChange);
-
-  // The Navigation API (Chrome 102+) emits a single "navigate" event for every
-  // same-document navigation, including ones that bypass the History API. Where
-  // it exists it fully covers the gap the poll below was guarding, so we listen
-  // to it instead of polling. The event fires before the URL commits, so defer
-  // the href check to the debounced dispatch. Fall back to a visibility-gated
-  // poll only on engines without the Navigation API.
   if (window.navigation && typeof window.navigation.addEventListener === "function") {
-    window.navigation.addEventListener("navigate", (e) => {
-      if (e.destination && e.destination.sameDocument) scheduleDispatch();
-    });
+    window.navigation.addEventListener("navigate", () => scheduleDispatch());
   } else {
+    // No Navigation API (e.g. Firefox): fall back to a visibility-gated poll.
     setInterval(() => {
       if (!document.hidden) notifyLocationChange();
     }, 500);

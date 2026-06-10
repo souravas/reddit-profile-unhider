@@ -18,7 +18,7 @@ Then visit any user profile that's marked as hidden — e.g., `https://www.reddi
 
 A single content script runs on `www.reddit.com`, `sh.reddit.com`, and `old.reddit.com`:
 
-1. [src/main.js](src/main.js) detects user-profile URLs and re-runs on SPA navigation (History API patching plus the Navigation API where available)
+1. [src/main.js](src/main.js) detects user-profile URLs and re-runs on SPA navigation (the Navigation API where available, with a poll fallback elsewhere)
 2. [src/profile.js](src/profile.js) watches the DOM for the "likes to keep their posts/comments hidden" message via `MutationObserver`. On old Reddit (which has no such notice), an empty profile listing triggers the panel instead.
 3. When detected, it calls Arctic Shift's `/api/posts/search?author=<name>` and `/api/comments/search?author=<name>` ([src/arctic-shift.js](src/arctic-shift.js))
 4. Results are rendered in a `.ru-panel` styled by [src/styles.css](src/styles.css). Each section loads up to 100 items; a **Load older** button pages further back through the archive (`before=<created_utc>` cursor).
