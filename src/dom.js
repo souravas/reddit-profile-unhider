@@ -94,7 +94,11 @@
     if (last < text.length) appendTextWithBreaks(container, text.slice(last));
   }
 
-  function renderMarkdown(md, container) {
+  // Archive text is untrusted; cap blockquote nesting so pathological input
+  // (thousands of stacked ">" levels) can't recurse until the stack blows.
+  const MAX_QUOTE_DEPTH = 10;
+
+  function renderMarkdown(md, container, depth = 0) {
     if (!md) return false;
     const lines = String(md).replace(/\r\n/g, "\n").split("\n");
     let i = 0;
@@ -124,7 +128,11 @@
           i++;
         }
         const bq = document.createElement("blockquote");
-        renderMarkdown(buf.join("\n"), bq);
+        if (depth < MAX_QUOTE_DEPTH) {
+          renderMarkdown(buf.join("\n"), bq, depth + 1);
+        } else {
+          renderInline(buf.join("\n"), bq);
+        }
         container.append(bq);
         rendered = true;
         continue;
