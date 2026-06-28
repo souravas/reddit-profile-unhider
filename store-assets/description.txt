@@ -1,4 +1,4 @@
-Ever land on a Reddit profile only to see "u/username likes to keep their posts hidden"? This extension fixes that instantly.
+Ever land on a Reddit profile only to see "u/username likes to keep their posts hidden"? This extension fixes that instantly — and it's fully open source, with no tracking, no analytics, and no account required.
 
 Reddit Profile Unhider automatically reveals the posts and comments a user has chosen to hide on their profile. The moment you open a hidden profile, it fetches the user's public activity from a public Reddit archive and displays it right on the page. No buttons, no copy-pasting usernames into other sites, no extra tabs.
 

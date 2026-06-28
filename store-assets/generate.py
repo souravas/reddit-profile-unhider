@@ -417,6 +417,14 @@ def screenshot_hero() -> str:
         Open the profile — the archive panel appears on its own. No clicks, no setup.
       </text>
 
+      <!-- trust badge, right edge aligned to the browser frame -->
+      <g transform="translate(950, 25)">
+        <rect width="250" height="30" rx="15" fill="{BG_PANEL}" stroke="url(#brandH)" stroke-width="1.3"/>
+        <circle cx="20" cy="15" r="4.5" fill="{ORANGE_LIGHT}"/>
+        <text x="36" y="20" font-family="{FONT}" font-size="11.5" font-weight="800"
+              fill="{TEXT_HI}" letter-spacing="0.3">OPEN SOURCE · NO TRACKING</text>
+      </g>
+
       {browser_frame(frame_x, frame_y, frame_w, frame_h, "reddit.com/user/example/")}
 
       <!-- avatar + username -->
