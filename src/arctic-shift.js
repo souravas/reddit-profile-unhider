@@ -1,8 +1,7 @@
 "use strict";
 
 (function () {
-  const API_BASE = "https://arctic-shift.photon-reddit.com/api";
-  const REQUEST_TIMEOUT_MS = 20000;
+  const extensionApi = globalThis.browser ?? globalThis.chrome;
   const MAX_CACHE_ENTRIES = 50;
 
   const cache = new Map();
@@ -31,30 +30,30 @@
     }
   }
 
-  async function timedFetch(url, options = {}) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  // A message can reach Firefox's idle event page just as it's being torn
+  // down, failing with "Receiving end does not exist". The next message wakes
+  // a fresh background, so a failed send gets one retry. (Archive errors come
+  // back as reply.error and aren't retried.)
+  async function sendToBackground(message) {
     try {
-      return await fetch(url, { ...options, signal: controller.signal });
-    } finally {
-      clearTimeout(timer);
+      return await extensionApi.runtime.sendMessage(message);
+    } catch {
+      return extensionApi.runtime.sendMessage(message);
     }
   }
 
+  // The request itself runs in the background script; src/background.js
+  // explains why content scripts can't fetch the archive in Firefox.
   async function doFetch(path, params) {
-    const url = new URL(`${API_BASE}${path}`);
-    for (const [k, v] of Object.entries(params)) {
-      if (v === undefined || v === null || v === "") continue;
-      url.searchParams.set(k, String(v));
+    // Chrome keeps a tab's content scripts running after the extension is
+    // updated or reloaded, but cuts them off from the new background.
+    if (!extensionApi.runtime?.id) {
+      throw new Error("the extension was updated, reload the page");
     }
-    const resp = await timedFetch(url.toString(), {
-      headers: { Accept: "application/json" },
-    });
-    if (!resp.ok) {
-      throw new Error(`Arctic Shift HTTP ${resp.status} for ${path}`);
-    }
-    const json = await resp.json();
-    return json && Array.isArray(json.data) ? json.data : [];
+    const reply = await sendToBackground({ type: "arctic-shift", path, params });
+    if (!reply) throw new Error("no response from the extension background");
+    if (reply.error) throw new Error(reply.error);
+    return reply.data;
   }
 
   // Caches the promise rather than the settled value, so concurrent calls for

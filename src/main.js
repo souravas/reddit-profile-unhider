@@ -43,17 +43,19 @@
   // Content scripts run in an isolated world with their own History wrapper,
   // so patching history.pushState here never sees the page's own calls —
   // Reddit's SPA router is invisible to a History patch from this side. The
-  // Navigation API (Chrome 102+) does fire in the isolated world for every
-  // navigation, but with two traps: destination.sameDocument is false for link
-  // clicks the page's router intercept()s into a soft navigation (exactly how
-  // Reddit switches profile tabs), and the URL hasn't committed yet when the
-  // event fires. So don't filter on the event at all — schedule, and let the
-  // debounced dispatch compare hrefs once the navigation has settled.
+  // Navigation API (Chrome 102+, Firefox 147+) does fire in the isolated world
+  // for every navigation, but with two traps: destination.sameDocument is
+  // false for link clicks the page's router intercept()s into a soft
+  // navigation (exactly how Reddit switches profile tabs), and the URL hasn't
+  // committed yet when the event fires. So don't filter on the event at all —
+  // schedule, and let the debounced dispatch compare hrefs once the navigation
+  // has settled.
   window.addEventListener("popstate", notifyLocationChange);
   if (window.navigation && typeof window.navigation.addEventListener === "function") {
     window.navigation.addEventListener("navigate", () => scheduleDispatch());
   } else {
-    // No Navigation API (e.g. Firefox): fall back to a visibility-gated poll.
+    // No Navigation API (e.g. Firefox before 147): fall back to a
+    // visibility-gated poll.
     setInterval(() => {
       if (!document.hidden) notifyLocationChange();
     }, 500);

@@ -20,16 +20,18 @@ Reddit Profile Unhider does not collect, store, transmit, sell, or share any per
 
 The extension makes HTTPS requests to `https://arctic-shift.photon-reddit.com` solely to fetch publicly archived Reddit content. Only the Reddit username being viewed, or the public ID of the post/comment being revealed (not any data about the extension's user), is included in the request. Arctic Shift's own data handling is governed by its operators.
 
+On Firefox, this is declared in the extension's manifest as "browsing activity" under Mozilla's data collection categories, because the username or ID comes from the Reddit page you are viewing. It goes only to Arctic Shift, never to the developer.
+
 ## Permissions
 
-- **Host permission** `https://arctic-shift.photon-reddit.com/*` — required by Manifest V3 to make the cross-origin fetch above.
+- **Host permission** `https://arctic-shift.photon-reddit.com/*` — lets the extension's background script make the requests above.
 - **Content script matches** `https://www.reddit.com/*`, `https://sh.reddit.com/*`, and `https://old.reddit.com/*` — required so the extension can detect hidden/removed content and render results in the page.
 
-The extension does not request `tabs`, `storage`, `cookies`, `webRequest`, `identity`, or any other Chrome API permissions.
+The extension does not request `tabs`, `storage`, `cookies`, `webRequest`, `identity`, or any other browser extension API permissions.
 
 ## Changes to this policy
 
-If the extension's data practices ever change, this document will be updated and the extension's Chrome Web Store listing will reflect the new disclosures.
+If the extension's data practices ever change, this document will be updated and the extension's Chrome Web Store and Firefox Add-ons listings will reflect the new disclosures.
 
 ## Contact
 
